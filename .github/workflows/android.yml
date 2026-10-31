@@ -40,12 +40,11 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Set up Android SDK
-        if: steps.source.outputs.present == 'true'
-        uses: android-actions/setup-android@v3
-
       - name: Build debug APK
         if: steps.source.outputs.present == 'true'
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
         run: gradle --no-daemon :app:assembleDebug
 
       - name: Upload debug APK
