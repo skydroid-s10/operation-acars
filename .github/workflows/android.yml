@@ -20,11 +20,11 @@ jobs:
         id: source
         shell: bash
         run: |
-          if [ -f app/build.gradle ]; then
+          if [ -f app/build.gradle ] && [ -f app/src/main/java/uk/co/operationacars/MainActivity.kt ] && [ -f app/src/main/java/uk/co/operationacars/decoder/Msk2400Demodulator.kt ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Android source tree has not yet been uploaded; build is being skipped."
+            echo "::notice::Android source tree is incomplete; build is being skipped until the app entry point and demodulator are present."
           fi
 
       - name: Set up JDK 17
