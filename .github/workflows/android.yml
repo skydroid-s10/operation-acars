@@ -16,24 +16,40 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
+      - name: Check project source
+        id: source
+        shell: bash
+        run: |
+          if [ -f app/build.gradle ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Android source tree has not yet been uploaded; build is being skipped."
+          fi
+
       - name: Set up JDK 17
+        if: steps.source.outputs.present == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Set up Gradle
+        if: steps.source.outputs.present == 'true'
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
       - name: Set up Android SDK
+        if: steps.source.outputs.present == 'true'
         uses: android-actions/setup-android@v3
 
       - name: Build debug APK
+        if: steps.source.outputs.present == 'true'
         run: gradle --no-daemon :app:assembleDebug
 
       - name: Upload debug APK
+        if: steps.source.outputs.present == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: operation-acars-debug-apk
