@@ -34,6 +34,14 @@ class MainActivity : Activity() {
     @Volatile private var samplesRead = 0L
     @Volatile private var inputError = "Not started"
     @Volatile private var demodulatedBits = 0L
+    @Volatile private var offlineStatus = "No offline test run"
+    @Volatile private var offlineSamples = 0L
+    @Volatile private var offlineDurationSeconds = 0.0
+    @Volatile private var offlineRms = 0.0
+    @Volatile private var offlinePeak = 0
+    @Volatile private var offlineBits = 0L
+    @Volatile private var offlineSourceRate = 0
+    @Volatile private var offlineChannels = 0
     private var decoderPipeline: AcarsDecodePipeline? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -112,8 +120,16 @@ class MainActivity : Activity() {
             "",
             "Audio capture: ${if (running) "RUNNING" else "STOPPED"}",
             "Sample rate requested: 48,000 Hz",
-            "Input samples read: $samplesRead",
-            "MSK bits demodulated: $demodulatedBits",
+            "Live input samples read: $samplesRead",
+            "Live MSK bits demodulated: $demodulatedBits",
+            "",
+            "Offline test: $offlineStatus",
+            "Offline source: " + (if (offlineSourceRate > 0) "$offlineSourceRate Hz, $offlineChannels channel(s)" else "N/A"),
+            "Offline output samples: $offlineSamples",
+            "Offline duration at 48 kHz: ${"%.3f".format(offlineDurationSeconds)} s",
+            "Offline RMS: ${"%.5f".format(offlineRms)}",
+            "Offline peak: $offlinePeak / 32767",
+            "Offline MSK bits: $offlineBits",
             "Frame/character validation: not yet enabled",
             "Approx. RMS level: ${"%.5f".format(lastRms)}",
             "Input state: $inputError",
@@ -142,6 +158,14 @@ class MainActivity : Activity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode != 73 || resultCode != RESULT_OK) return
         val uri: Uri = data?.data ?: return
+        offlineStatus = "Running"
+        offlineSamples = 0L
+        offlineDurationSeconds = 0.0
+        offlineRms = 0.0
+        offlinePeak = 0
+        offlineBits = 0L
+        offlineSourceRate = 0
+        offlineChannels = 0
         status.text = "Status: decoding selected audio file…"
         level.text = "Offline test: reading recording"
         messages.text = "AUDIO FILE TEST\n\nDecoding audio and running the experimental 2400-baud MSK front-end…"
@@ -180,12 +204,18 @@ class MainActivity : Activity() {
                         "",
                         "IMPORTANT: bit production only confirms that the experimental signal-processing stage ran. It does NOT mean an ACARS frame or message was decoded. Sync, parity, BCS and message parsing remain to be implemented and validated."
                     ).joinToString("\n")
-                    samplesRead = decoded.samples.size.toLong()
-                    demodulatedBits = pipeline.bitsProduced
-                    lastRms = rms
+                    offlineStatus = "Complete"
+                    offlineSamples = decoded.samples.size.toLong()
+                    offlineDurationSeconds = duration
+                    offlineRms = rms
+                    offlinePeak = peak
+                    offlineBits = pipeline.bitsProduced
+                    offlineSourceRate = decoded.sampleRate
+                    offlineChannels = decoded.channels
                     inputError = "Offline file test completed; ACARS validation not yet implemented"
                 }
             } catch (e: Exception) {
+                offlineStatus = "Failed: ${e.message ?: e.javaClass.simpleName}"
                 runOnUiThread {
                     status.text = "Status: offline test failed"
                     level.text = "Audio file could not be processed"
